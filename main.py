@@ -9,13 +9,13 @@ Halt = False
 
 def print_state(pc, mem, reg):
     print("\n@@@\nstate:")
-    print("\tpc " + str(pc))
+    print(f"\tpc {pc}")
     print("\tmemory:")
-    for i in mem:
-        print("\t\tmem[ " + str(mem.index(i)) + " ] " + str(i))
+    for i, j in enumerate(mem):
+        print(f"\t\tmem[ {i} ] {j}")
     print("\tregisters:")
-    for i in range(NUM_REG):
-        print("\t\treg[ " + str(i) + " ] " + str(reg[i]))
+    for i, j in enumerate(reg):
+        print(f"\t\treg[ {i} ] {j}")
     print("end state\n")
 
 
@@ -26,6 +26,24 @@ def int_to_bin(input):
         binum = binum + "0"
     input = binum + input
     return input
+
+
+def two_comp(bitstring: str):
+    # If the number is already Positive
+    if bitstring[0] == '0':
+        return int(f"0b{bitstring}", 2)
+    # If the number is negative
+    bit_list = list(bitstring)
+    for ind, j in enumerate(bit_list):
+        if j == '1':
+            bit_list[ind] = '0'
+        else:
+            bit_list[ind] = '1'
+    bitstring = "".join(bit_list)
+    return -1 * (int(f"0b{bitstring}", 2) + 1)
+
+
+
 
 
 def add_inst(num):
@@ -39,12 +57,17 @@ def add_inst(num):
         return True
 
     # Running the Add into Destination Register
-    Register[int(f"0b{num[29:]}, 2")] = RegA + RegB
+    Register[int(f"0b{num[29:]}", 2)] = RegA + RegB
     return False
 
 
 def nand_inst(num):
     return True
+
+
+def lw_inst(num):
+    Address = Register[int(f"0b{num[10:13]}", 2)]
+    Offset = two_comp(num[16:])
 
 
 def op_code(num):
@@ -57,7 +80,10 @@ def op_code(num):
         return add_inst(num)
     elif opcode == "001":
         return nand_inst(num)
+    elif opcode == "010":
+        return lw_inst(num)
 
+print(str(two_comp("1111111111111111")))
 
 for i in range(NUM_REG):
     Register.append(0)
