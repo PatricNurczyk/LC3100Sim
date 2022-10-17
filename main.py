@@ -28,11 +28,35 @@ def int_to_bin(input):
     return input
 
 
-def op_code(num):
-    print(num[7:10])
-    # Halt
-    if num[7:10] == "110":
+def add_inst(num):
+    # Getting Registers A and B
+    RegA = Register[int(f"0b{num[10:13]}", 2)]
+    RegB = Register[int(f"0b{num[13:16]}", 2)]
+
+    # Getting the Destination Register
+    if num[29:] == "000":
+        print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
         return True
+
+    # Running the Add into Destination Register
+    Register[int(f"0b{num[29:]}, 2")] = RegA + RegB
+    return False
+
+
+def nand_inst(num):
+    return True
+
+
+def op_code(num):
+    opcode = num[7:10]
+    print(opcode)
+    # Halt
+    if opcode == "110":
+        return True
+    elif opcode == "000":
+        return add_inst(num)
+    elif opcode == "001":
+        return nand_inst(num)
 
 
 for i in range(NUM_REG):
