@@ -1,10 +1,6 @@
-# Variables
+# Const Variables
 MAX_MEM_SIZE = 65536
 NUM_REG = 8
-Pc = 0
-Memory = []
-Register = []
-Halt = False
 
 
 def print_state(pc, mem, reg):
@@ -43,10 +39,7 @@ def two_comp(bitstring: str):
     return -1 * (int(f"0b{bitstring}", 2) + 1)
 
 
-
-
-
-def add_inst(num):
+def add_inst(num: str, Register: list, Pc: int):
     # Getting Registers A and B
     RegA = Register[int(f"0b{num[10:13]}", 2)]
     RegB = Register[int(f"0b{num[13:16]}", 2)]
@@ -58,50 +51,96 @@ def add_inst(num):
 
     # Running the Add into Destination Register
     Register[int(f"0b{num[29:]}", 2)] = RegA + RegB
-    return False
+    return False, Pc + 1
 
 
-def nand_inst(num):
-    return True
+def nand_inst(num: str, Register: list, Pc: int):
+    return False, Pc + 1
 
 
-def lw_inst(num):
+def lw_inst(num: str, Register: list, Memory: list, Pc: int):
     Address = Register[int(f"0b{num[10:13]}", 2)]
     Offset = two_comp(num[16:])
+    if (Address + Offset) >= len(Memory):
+        print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
+        return True, Pc
+    Address += Offset
+    Register[int(f"0b{num[13:16]}", 2)] = Memory[Address]
+    return False, Pc + 1
 
 
-def op_code(num):
+def sw_inst(num: str, Register: list, Memory: list, Pc: int):
+    Address = Register[int(f"0b{num[10:13]}", 2)]
+    Offset = two_comp(num[16:])
+    if (Address + Offset) >= MAX_MEM_SIZE:
+        print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
+        return True, Pc
+    elif (Address + Offset) >= len(Memory):
+        Memory.append(Register[int(f"0b{num[13:16]}", 2)])
+        return False, Pc + 1
+    Address += Offset
+    Memory[Address] = Register[int(f"0b{num[13:16]}", 2)]
+    return False, Pc + 1
+
+
+def beq_inst(num: str, Register: list, Memory: list, Pc: int):
+    return False, Pc + 1
+
+
+def op_code(num: str, Register: list, Memory: list, Pc: int):
     opcode = num[7:10]
-    print(opcode)
-    # Halt
     if opcode == "110":
-        return True
-    elif opcode == "000":
-        return add_inst(num)
-    elif opcode == "001":
-        return nand_inst(num)
-    elif opcode == "010":
-        return lw_inst(num)
+        # Halt
+        return True, Pc
+    if opcode == "000":
+        return add_inst(num, Register, Pc)
+    if opcode == "001":
+        return nand_inst(num, Register, Pc)
+    if opcode == "010":
+        return lw_inst(num, Register, Memory, Pc)
+    if opcode == "011":
+        return sw_inst(num, Register, Memory, Pc)
+    if opcode == "100":
+        return beq_inst(num, Register, Memory, Pc)
+    if opcode == "111":
+        # Noop
+        return False, Pc + 1
+    else:
+        print(f"Error in Memory Location {Pc}, Unknown Opcode")
+        return True, Pc
 
-print(str(two_comp("1111111111111111")))
 
-for i in range(NUM_REG):
-    Register.append(0)
-print(Register)
-print("Welcome to the LC3100 Simulator")
-print("This Simulator will take existing machine code and output the results to a text file 'Output'")
-print("Enter the File Name containing Machine Code")
-f = open(input("FileName: ") + ".txt", "rt")
-line = f.readline()
-while line != '':
-    Memory.append(int(line))
+def main():
+    # Declaring Variables
+    Pc = 0
+    Memory = []
+    Register = []
+    Halt = False
+
+    # Loading 0 into Registers
+    for i in range(NUM_REG):
+        Register.append(0)
+    print("Welcome to the LC3100 Simulator")
+    print("This Simulator will take existing machine code and output the results to a text file 'Output'")
+    print("Enter the File Name containing Machine Code")
+    # Read the Text File
+    f = open(input("FileName: ") + ".txt", "rt")
     line = f.readline()
-for i in Memory:
-    print("Memory[" + str(Memory.index(i)) + "] = " + str(i))
-while not Halt and Pc < len(Memory):
-    # First We print the state
-    print_state(Pc, Memory, Register)
-    # We convert the integer to a binary string
-    curr = int_to_bin(Memory[Pc])
-    Halt = op_code(curr)
-    Pc += 1
+    while line != '':
+        Memory.append(int(line))
+        line = f.readline()
+    for i, j in enumerate(Memory):
+        print(f"Memory[ {i} ] = {j}")
+    while not Halt and Pc < len(Memory):
+        # First We print the state
+        print_state(Pc, Memory, Register)
+        # We convert the integer to a binary string
+        curr = int_to_bin(Memory[Pc])
+        # Then we call the function by the Opcode
+        Result = op_code(curr, Register, Memory, Pc)
+        Halt = Result[0]
+        Pc = Result[1]
+
+
+if __name__ == "__main__":
+    main()
