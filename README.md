@@ -7,4 +7,5 @@ For Assembling use the included Assember:
 
 Assembler Instruction
 
-Label<white>opcode<white>arg1<white>arg2<white>arg3
+Label opcode arg1 arg2 arg3
+If a label isnt required add an empty space before the opcode
