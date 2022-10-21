@@ -8,7 +8,8 @@ def print_state(pc, mem, reg):
     print(f"\tpc {pc}")
     print("\tmemory:")
     for i, j in enumerate(mem):
-        print(f"\t\tmem[ {i} ] {j}")
+        if j is not None:
+            print(f"\t\tmem[ {i} ] {j}")
     print("\tregisters:")
     for i, j in enumerate(reg):
         print(f"\t\treg[ {i} ] {j}")
@@ -47,7 +48,7 @@ def add_inst(num: str, Register: list, Pc: int):
     # Getting the Destination Register
     if num[29:] == "000":
         print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
-        return True
+        return True, Pc
 
     # Running the Add into Destination Register
     Register[int(f"0b{num[29:]}", 2)] = RegA + RegB
@@ -55,6 +56,19 @@ def add_inst(num: str, Register: list, Pc: int):
 
 
 def nand_inst(num: str, Register: list, Pc: int):
+    Output = []
+    RegA = int_to_bin(Register[int(f"0b{num[10:13]}", 2)])
+    RegB = int_to_bin(Register[int(f"0b{num[13:16]}", 2)])
+    for index, obj in enumerate(RegA):
+        if not (obj == RegB[index]):
+            Output.append("1")
+        else:
+            Output.append("0")
+    if num[29:] == "000":
+        print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
+        return True, Pc
+    Output = "".join(Output)
+    Register[int(f"0b{num[29:]}", 2)] = int(f"0b{Output}", 2)
     return False, Pc + 1
 
 
@@ -75,9 +89,6 @@ def sw_inst(num: str, Register: list, Memory: list, Pc: int):
     if (Address + Offset) >= MAX_MEM_SIZE:
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
         return True, Pc
-    elif (Address + Offset) >= len(Memory):
-        Memory.append(Register[int(f"0b{num[13:16]}", 2)])
-        return False, Pc + 1
     Address += Offset
     Memory[Address] = Register[int(f"0b{num[13:16]}", 2)]
     return False, Pc + 1
@@ -126,11 +137,15 @@ def main():
     # Read the Text File
     f = open(input("FileName: ") + ".txt", "rt")
     line = f.readline()
-    while line != '':
-        Memory.append(int(line))
+    for index in range(MAX_MEM_SIZE):
+        if line != '':
+            Memory.append(int(line))
+        else:
+            Memory.append(None)
         line = f.readline()
     for i, j in enumerate(Memory):
-        print(f"Memory[ {i} ] = {j}")
+        if j is not None:
+            print(f"Memory[ {i} ] = {j}")
     while not Halt and Pc < len(Memory):
         # First We print the state
         print_state(Pc, Memory, Register)
