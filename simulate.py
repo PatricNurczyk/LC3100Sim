@@ -3,17 +3,24 @@ MAX_MEM_SIZE = 65536
 NUM_REG = 8
 
 
-def print_state(pc, mem, reg):
+def print_state(pc: int, mem: list, reg: list, output):
     print("\n@@@\nstate:")
+    output.write("\n@@@\nstate:\n")
     print(f"\tpc {pc}")
+    output.write(f"\tpc {pc}\n")
     print("\tmemory:")
+    output.write("\tmemory:\n")
     for i, j in enumerate(mem):
         if j is not None:
             print(f"\t\tmem[ {i} ] {j}")
+            output.write(f"\t\tmem[ {i} ] {j}\n")
     print("\tregisters:")
+    output.write("\tregisters:\n")
     for i, j in enumerate(reg):
         print(f"\t\treg[ {i} ] {j}")
+        output.write(f"\t\treg[ {i} ] {j}\n")
     print("end state\n")
+    output.write("end state\n")
 
 
 def int_to_bin(input):
@@ -40,7 +47,7 @@ def two_comp(bitstring: str):
     return -1 * (int(f"0b{bitstring}", 2) + 1)
 
 
-def add_inst(num: str, Register: list, Pc: int):
+def add_inst(num: str, Register: list, Pc: int, output):
     # Getting Registers A and B
     RegA = Register[int(f"0b{num[10:13]}", 2)]
     RegB = Register[int(f"0b{num[13:16]}", 2)]
@@ -48,14 +55,15 @@ def add_inst(num: str, Register: list, Pc: int):
     # Getting the Destination Register
     if num[29:] == "000":
         print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
-        return True, Pc
+        output.write(f"Error in Memory Location {Pc}, Cannot write to Register 0\n")
+        return True, Pc + 1
 
     # Running the Add into Destination Register
     Register[int(f"0b{num[29:]}", 2)] = RegA + RegB
     return False, Pc + 1
 
 
-def nand_inst(num: str, Register: list, Pc: int):
+def nand_inst(num: str, Register: list, Pc: int, output):
     Output = []
     RegA = int_to_bin(Register[int(f"0b{num[10:13]}", 2)])
     RegB = int_to_bin(Register[int(f"0b{num[13:16]}", 2)])
@@ -66,59 +74,72 @@ def nand_inst(num: str, Register: list, Pc: int):
             Output.append("0")
     if num[29:] == "000":
         print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
-        return True, Pc
+        output.write(f"Error in Memory Location {Pc}, Cannot write to Register 0\n")
+        return True, Pc + 1
     Output = "".join(Output)
     Register[int(f"0b{num[29:]}", 2)] = int(f"0b{Output}", 2)
     return False, Pc + 1
 
 
-def lw_inst(num: str, Register: list, Memory: list, Pc: int):
+def lw_inst(num: str, Register: list, Memory: list, Pc: int, output):
     Address = Register[int(f"0b{num[10:13]}", 2)]
     Offset = two_comp(num[16:])
     if (Address + Offset) >= len(Memory):
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
-        return True, Pc
+        output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
+        return True, Pc + 1
     Address += Offset
     Register[int(f"0b{num[13:16]}", 2)] = Memory[Address]
     return False, Pc + 1
 
 
-def sw_inst(num: str, Register: list, Memory: list, Pc: int):
+def sw_inst(num: str, Register: list, Memory: list, Pc: int, output):
     Address = Register[int(f"0b{num[10:13]}", 2)]
     Offset = two_comp(num[16:])
     if (Address + Offset) >= MAX_MEM_SIZE:
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
-        return True, Pc
+        output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
+        return True, Pc + 1
     Address += Offset
     Memory[Address] = Register[int(f"0b{num[13:16]}", 2)]
     return False, Pc + 1
 
 
-def beq_inst(num: str, Register: list, Memory: list, Pc: int):
+def beq_inst(num: str, Register: list, Pc: int, output):
+    Offset = two_comp(num[16:])
+    if (Pc + Offset) >= MAX_MEM_SIZE:
+        print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
+        output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
+        return True, Pc + 1
+    RegA = Register[int(f"0b{num[10:13]}", 2)]
+    RegB = Register[int(f"0b{num[13:16]}", 2)]
+    if RegA == RegB:
+        return False, Pc + 1 + Offset
     return False, Pc + 1
 
 
-def op_code(num: str, Register: list, Memory: list, Pc: int):
+def op_code(num: str, Register: list, Memory: list, Pc: int, output):
     opcode = num[7:10]
     if opcode == "110":
         # Halt
-        return True, Pc
+        return True, Pc + 1
     if opcode == "000":
-        return add_inst(num, Register, Pc)
+        return add_inst(num, Register, Pc, output)
     if opcode == "001":
-        return nand_inst(num, Register, Pc)
+        return nand_inst(num, Register, Pc, output)
     if opcode == "010":
-        return lw_inst(num, Register, Memory, Pc)
+        return lw_inst(num, Register, Memory, Pc, output)
     if opcode == "011":
-        return sw_inst(num, Register, Memory, Pc)
+        return sw_inst(num, Register, Memory, Pc, output)
     if opcode == "100":
-        return beq_inst(num, Register, Memory, Pc)
+        return beq_inst(num, Register, Pc, output)
     if opcode == "111":
         # Noop
         return False, Pc + 1
     else:
         print(f"Error in Memory Location {Pc}, Unknown Opcode")
-        return True, Pc
+        output.write(f"Error in Memory Location {Pc}, Unknown Opcode\n")
+        return True, Pc + 1
 
 
 def main():
@@ -127,7 +148,7 @@ def main():
     Memory = []
     Register = []
     Halt = False
-
+    InstCounter = 0
     # Loading 0 into Registers
     for i in range(NUM_REG):
         Register.append(0)
@@ -136,6 +157,7 @@ def main():
     print("Enter the File Name containing Machine Code")
     # Read the Text File
     f = open(input("FileName: ") + ".txt", "rt")
+    output = open("output.txt", "w")
     line = f.readline()
     for index in range(MAX_MEM_SIZE):
         if line != '':
@@ -146,15 +168,25 @@ def main():
     for i, j in enumerate(Memory):
         if j is not None:
             print(f"Memory[ {i} ] = {j}")
+            output.write(f"Memory[ {i} ] = {j}\n")
     while not Halt and Pc < len(Memory):
         # First We print the state
-        print_state(Pc, Memory, Register)
+        print_state(Pc, Memory, Register, output)
         # We convert the integer to a binary string
         curr = int_to_bin(Memory[Pc])
         # Then we call the function by the Opcode
-        Result = op_code(curr, Register, Memory, Pc)
+        Result = op_code(curr, Register, Memory, Pc, output)
         Halt = Result[0]
         Pc = Result[1]
+        InstCounter += 1
+    print("machine halted")
+    output.write("machine halted\n")
+    print(f"total of {InstCounter} instructions executed")
+    output.write(f"total of {InstCounter} instructions executed\n")
+    print("final state of machine:")
+    output.write("final state of machine:\n")
+    print_state(Pc, Memory, Register, output)
+    input("Press Enter to Close the Simulator")
 
 
 if __name__ == "__main__":

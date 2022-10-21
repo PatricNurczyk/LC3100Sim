@@ -1,0 +1,10 @@
+ lw 0 2 const
+ lw 0 4 9
+loopstart lw 0 1 one
+ add 1 2 3
+ sw 0 3 one
+ beq 3 4 loopstart
+ halt
+one .fill 1
+const .fill 3
+max .fill 10
