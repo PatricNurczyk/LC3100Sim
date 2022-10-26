@@ -68,10 +68,10 @@ def nand_inst(num: str, Register: list, Pc: int, output):
     RegA = int_to_bin(Register[int(f"0b{num[10:13]}", 2)])
     RegB = int_to_bin(Register[int(f"0b{num[13:16]}", 2)])
     for index, obj in enumerate(RegA):
-        if not (obj == RegB[index]):
-            Output.append("1")
-        else:
+        if obj == "1" and RegB[index] == "1":
             Output.append("0")
+        else:
+            Output.append("1")
     if num[29:] == "000":
         print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
         output.write(f"Error in Memory Location {Pc}, Cannot write to Register 0\n")
@@ -154,9 +154,15 @@ def main():
         Register.append(0)
     print("Welcome to the LC3100 Simulator")
     print("This Simulator will take existing machine code and output the results to a text file 'Output'")
-    print("Enter the File Name containing Machine Code")
+    print("Enter the File Name containing Machine Code (Ex: 'Test1.txt') ")
     # Read the Text File
-    f = open(input("FileName: ") + ".txt", "rt")
+
+    while True:
+        try:
+            f = open(input("FileName: "), "rt")
+            break
+        except:
+            print("File not found...Please enter a different file name")
     output = open("output.txt", "w")
     line = f.readline()
     for index in range(MAX_MEM_SIZE):
