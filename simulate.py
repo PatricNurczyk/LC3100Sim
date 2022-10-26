@@ -77,7 +77,7 @@ def nand_inst(num: str, Register: list, Pc: int, output):
         output.write(f"Error in Memory Location {Pc}, Cannot write to Register 0\n")
         return True, Pc + 1
     Output = "".join(Output)
-    Register[int(f"0b{num[29:]}", 2)] = int(f"0b{Output}", 2)
+    Register[int(f"0b{num[29:]}", 2)] = two_comp(Output)
     return False, Pc + 1
 
 
