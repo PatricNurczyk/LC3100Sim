@@ -2,7 +2,7 @@
 MAX_MEM_SIZE = 65536
 NUM_REG = 8
 
-
+# Prints out the current state of the Machine
 def print_state(pc: int, mem: list, reg: list, output):
     print("\n@@@\nstate:")
     output.write("\n@@@\nstate:\n")
@@ -23,15 +23,19 @@ def print_state(pc: int, mem: list, reg: list, output):
     output.write("end state\n")
 
 
+# This will Convert a Integer Number to a 32-Bit Binary String
 def int_to_bin(input):
+
+    # we get the binary string then keep everything except the 0b
     input = bin(input)[2:]
-    binum = "0"
-    for j in range(31 - len(input)):
-        binum = binum + "0"
-    input = binum + input
+
+    # Extends the string by adding 0s until it is 32-Bits 
+    while len(input) != 32:
+        input = "0" + input
     return input
 
 
+# This will take a Binary String and convert it into a 2s-Compliment Integer
 def two_comp(bitstring: str):
     # If the number is already Positive
     if bitstring[0] == '0':
@@ -46,7 +50,7 @@ def two_comp(bitstring: str):
     bitstring = "".join(bit_list)
     return -1 * (int(f"0b{bitstring}", 2) + 1)
 
-
+# Preforms the Add Instruction, (DestReg = RegA + RegB)
 def add_inst(num: str, Register: list, Pc: int, output):
     # Getting Registers A and B
     RegA = Register[int(f"0b{num[10:13]}", 2)]
@@ -62,11 +66,16 @@ def add_inst(num: str, Register: list, Pc: int, output):
     Register[int(f"0b{num[29:]}", 2)] = RegA + RegB
     return False, Pc + 1
 
-
+# Preforms the Nand Instruction, (DestReg = RegA NAND RegB)
 def nand_inst(num: str, Register: list, Pc: int, output):
+    # Creates a output list
     Output = []
+
+    # Loads RegA and RegB
     RegA = int_to_bin(Register[int(f"0b{num[10:13]}", 2)])
     RegB = int_to_bin(Register[int(f"0b{num[13:16]}", 2)])
+
+    # If RegA and RegB are both 1 then NAND of 1 and 1 is 0
     for index, obj in enumerate(RegA):
         if obj == "1" and RegB[index] == "1":
             Output.append("0")
@@ -76,66 +85,93 @@ def nand_inst(num: str, Register: list, Pc: int, output):
         print(f"Error in Memory Location {Pc}, Cannot write to Register 0")
         output.write(f"Error in Memory Location {Pc}, Cannot write to Register 0\n")
         return True, Pc + 1
+
+    # Creates a binary string from the list
     Output = "".join(Output)
+
+    # Returns the 2s-Compliment Value of the Binary Number
     Register[int(f"0b{num[29:]}", 2)] = two_comp(Output)
     return False, Pc + 1
 
-
+# Preforms the lw Instruction, (DestReg = Mem[Address + Offset])
 def lw_inst(num: str, Register: list, Memory: list, Pc: int, output):
+
+    # Loads the Address and gets the offset
     Address = Register[int(f"0b{num[10:13]}", 2)]
     Offset = two_comp(num[16:])
     if (Address + Offset) >= len(Memory):
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
         output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
         return True, Pc + 1
+
+    # Adds the Address and the Offset
     Address += Offset
+
+    # Loads the word into the Destination Register
     Register[int(f"0b{num[13:16]}", 2)] = Memory[Address]
     return False, Pc + 1
 
-
+# Preforms the sw function, (Mem[Address + Offset] = RegB)
 def sw_inst(num: str, Register: list, Memory: list, Pc: int, output):
+    # Loads the Address and the offset
     Address = Register[int(f"0b{num[10:13]}", 2)]
     Offset = two_comp(num[16:])
     if (Address + Offset) >= MAX_MEM_SIZE:
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
         output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
         return True, Pc + 1
+
+    # Adds the offset to the Address
     Address += Offset
+
+    #Stores the contents of RegB into the address in Memory
     Memory[Address] = Register[int(f"0b{num[13:16]}", 2)]
     return False, Pc + 1
 
-
+# Preforms the beq instruction, (If RegA == RegB then Pc = Pc + 1 + Offset)
 def beq_inst(num: str, Register: list, Pc: int, output):
+    # Loads the Offset
     Offset = two_comp(num[16:])
-    if (Pc + Offset) >= MAX_MEM_SIZE:
+    if (Pc + 1 + Offset) >= MAX_MEM_SIZE:
         print(f"Error in Memory Location {Pc}, Outside Memory Bounds")
         output.write(f"Error in Memory Location {Pc}, Outside Memory Bounds\n")
         return True, Pc + 1
+
+    # Loads the Registers
     RegA = Register[int(f"0b{num[10:13]}", 2)]
     RegB = Register[int(f"0b{num[13:16]}", 2)]
+
+    # Checks for Equality and will branch if True
     if RegA == RegB:
         return False, Pc + 1 + Offset
     return False, Pc + 1
 
-
+# This Function will scan for the the opcode, then run the corresponding function
+# Returns whether or not to halt the program as well as the Program Counter
 def op_code(num: str, Register: list, Memory: list, Pc: int, output):
     opcode = num[7:10]
+    # Halt
     if opcode == "110":
-        # Halt
         return True, Pc + 1
+    # Add
     if opcode == "000":
         return add_inst(num, Register, Pc, output)
+    # Nand
     if opcode == "001":
         return nand_inst(num, Register, Pc, output)
+    # Load Word
     if opcode == "010":
-        return lw_inst(num, Register, Memory, Pc, output)
+        return lw_inst(num, Register, Memory, Pc, output) 
+    # Store Word
     if opcode == "011":
         return sw_inst(num, Register, Memory, Pc, output)
+    # Branch
     if opcode == "100":
         return beq_inst(num, Register, Pc, output)
+    # Noop
     if opcode == "111":
-        # Noop
         return False, Pc + 1
+    #Unknown Function
     else:
         print(f"Error in Memory Location {Pc}, Unknown Opcode")
         output.write(f"Error in Memory Location {Pc}, Unknown Opcode\n")
@@ -165,12 +201,16 @@ def main():
             print("File not found...Please enter a different file name")
     output = open("output.txt", "w")
     line = f.readline()
+
+    #Loading Memory
     for index in range(MAX_MEM_SIZE):
         if line != '':
             Memory.append(int(line))
         else:
             Memory.append(None)
         line = f.readline()
+
+    #Prints out Memory
     for i, j in enumerate(Memory):
         if j is not None:
             print(f"Memory[ {i} ] = {j}")
