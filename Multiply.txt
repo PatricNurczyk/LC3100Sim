@@ -1,0 +1,14 @@
+ lw 0 2 numOne
+ lw 0 4 13
+ lw 0 5 const 
+ lw 0 6 const
+lstart lw 0 1 numOne
+ add 1 2 3
+ sw 0 3 numOne
+ add 6 5 6
+ beq 4 6 1
+ beq 0 0 lstart
+ halt
+const .fill 1 counter 
+numOne .fill 5 (A) X  B
+numTwo .fill 6  A  X (B)

@@ -216,6 +216,9 @@ def main():
             print(f"Memory[ {i} ] = {j}")
             output.write(f"Memory[ {i} ] = {j}\n")
     while not Halt and Pc < len(Memory):
+        if Memory[Pc] is None:
+            print(f"No Data in Mem {Pc}")
+            break
         # First We print the state
         print_state(Pc, Memory, Register, output)
         # We convert the integer to a binary string
