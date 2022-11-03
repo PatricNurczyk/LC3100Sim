@@ -218,6 +218,8 @@ def main():
     while not Halt and Pc < len(Memory):
         if Memory[Pc] is None:
             print(f"No Data in Mem {Pc}")
+            output.write(f"No Data in Mem {Pc}\n")
+            Pc += 1
             break
         # First We print the state
         print_state(Pc, Memory, Register, output)
